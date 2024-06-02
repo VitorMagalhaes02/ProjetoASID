@@ -1,0 +1,121 @@
+version: '3.8'
+
+networks:
+  my-network:
+    driver: bridge
+
+services:
+  api_gateway:
+    build:
+      context: ./api_gateway
+      dockerfile: Dockerfile
+    ports:
+      - '8080:8080'
+    depends_on:
+      - discoveryserver
+    restart: unless-stopped
+    networks:
+      - my-network
+
+  discoveryserver:
+    build:
+      context: ./discovery_server
+      dockerfile: Dockerfile
+    ports:
+      - '8761:8761'
+    environment:
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false
+      - EUREKA_CLIENT_FETCH_REGISTRY=false
+    restart: unless-stopped
+    networks:
+      - my-network
+
+  town-service:
+    build:
+      context: ./town-service
+      dockerfile: Dockerfile
+    ports:
+      - '8081:8081'
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3307/Cidades?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=12345
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discoveryserver:8761/eureka
+      - EUREKA_INSTANCE_HOSTNAME=town-service
+    depends_on:
+      - discoveryserver
+    restart: unless-stopped
+    networks:
+      - my-network
+
+  student-service:
+    build:
+      context: ./student-service
+      dockerfile: Dockerfile
+    ports:
+      - '8082:8082'
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3307/Alunos?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=12345
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discoveryserver:8761/eureka
+      - EUREKA_INSTANCE_HOSTNAME=student-service
+    depends_on:
+      - discoveryserver
+    restart: unless-stopped
+    networks:
+      - my-network
+
+  parent-service:
+    build:
+      context: ./parent-service
+      dockerfile: Dockerfile
+    ports:
+      - '8083:8083'
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3307/Responsaveis?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=12345
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discoveryserver:8761/eureka
+      - EUREKA_INSTANCE_HOSTNAME=parent-service
+    depends_on:
+      - discoveryserver
+    restart: unless-stopped
+    networks:
+      - my-network
+
+  club-service:
+    build:
+      context: ./club-service
+      dockerfile: Dockerfile
+    ports:
+      - '8084:8084'
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3307/Clubes?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=12345
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discoveryserver:8761/eureka
+      - EUREKA_INSTANCE_HOSTNAME=club-service
+    depends_on:
+      - discoveryserver
+    restart: unless-stopped
+    networks:
+      - my-network
+
+  aggregation-service:
+    build:
+      context: ./api_agreggation
+      dockerfile: Dockerfile
+    ports:
+      - '8085:8085'
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3307/Clubes?createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=12345
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discoveryserver:8761/eureka
+      - EUREKA_INSTANCE_HOSTNAME=aggregation-service
+    depends_on:
+      - discoveryserver
+    restart: unless-stopped
+    networks:
+      - my-network

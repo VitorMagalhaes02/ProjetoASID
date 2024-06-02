@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerenciamento de Alunos</title>
+<style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    input, button, select { margin-bottom: 10px; width: 100%; padding: 8px; box-sizing: border-box; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; }
+    label { display: block; margin-top: 20px; font-weight: bold; }
+    .form-section { margin-bottom: 40px; }
+    .form-row { display: flex; justify-content: space-between; }
+    .form-row > div { flex: 1; padding: 0 10px; }
+</style>
+</head>
+<body>
+    <h1>Gerenciamento de Alunos</h1>
+
+    <section class="form-section">
+        <h2>Adicionar Aluno</h2>
+        <form id="addStudentForm">
+            <div class="form-row">
+                <div>
+                    <input type="text" id="firstName" placeholder="Primeiro Nome do Aluno" required>
+                    <input type="text" id="lastName" placeholder="Último Nome do Aluno" required>
+                    <input type="text" id="middleName" placeholder="Nome do Meio do Aluno">
+                    <input type="text" id="email" placeholder="Email do Aluno">
+                    <input type="text" id="egn" placeholder="EGN do Aluno" required>
+                    <input type="number" id="age" placeholder="Idade do Aluno" required>
+                    <select id="gender">
+                        <option value="">Selecione o Gênero do Aluno</option>
+                        <option value="M">Masculino</option>
+                        <option value="F">Feminino</option>
+                    </select>
+                    <input type="date" id="enrollDate" placeholder="Data de Matrícula" required>
+                </div>
+                <div>
+                    <input type="text" id="newCityName" placeholder="Nome da nova cidade (opcional)">
+                    <input type="number" id="newCityPopulation" placeholder="População da nova cidade (opcional)">
+                    <select id="townId">
+                        <option value="">Selecione a Cidade ou adicione nova acima</option>
+                    </select>
+                    <input type="text" id="newClubName" placeholder="Nome do novo clube (opcional)">
+                    <input type="text" id="newClubDescription" placeholder="Descrição do novo clube (opcional)">
+                    <select id="clubId">
+                        <option value="">Selecione o Clube ou adicione novo acima</option>
+                    </select>
+                </div>
+                <div>
+                    <select id="parentSelect">
+                        <option value="">Selecione um Responsável Existente</option>
+                        <!-- Opções de responsáveis serão carregadas aqui -->
+                    </select>
+                    <input type="text" id="parentFirstName" placeholder="Primeiro Nome do Pai">
+                    <input type="text" id="parentMiddleName" placeholder="Nome do Meio do Pai">
+                    <input type="text" id="parentLastName" placeholder="Último Nome do Pai">
+                    <input type="text" id="parentEmail" placeholder="Email do Pai">
+                    <input type="text" id="parentPhoneNumber" placeholder="Telefone do Pai">
+                    <input type="number" id="parentAge" placeholder="Idade do Pai">
+                    <input type="text" id="parentEGN" placeholder="EGN do Pai">
+                    <select id="parentGender">
+                        <option value="">Gênero do Pai</option>
+                        <option value="M">Masculino</option>
+                        <option value="F">Feminino</option>
+                    </select>
+                    <select id="townIdParent">
+                        <option value="">Selecione a Cidade</option>
+                    </select>
+                </div>
+            </div>
+            <button type="button" onclick="addStudent()">Adicionar Aluno</button>
+        </form>
+    </section>
+
+    <!-- Tabela para exibir os alunos -->
+    <section>
+        <h2>Lista de Alunos</h2>
+        <table id="studentTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nome</th>
+                    <th>Email</th>
+                    <th>Idade</th>
+                    <th>Gênero</th>
+                    <th>Data de Matrícula</th>
+                    <th>Cidade</th>
+                    <th>Responsável</th>
+                    <th>Clube</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Os dados dos alunos serão carregados aqui -->
+            </tbody>
+        </table>
+    </section>
+
+    <section>
+        <h2>Procurar Aluno por ID</h2>
+        <label for="studentId">ID do Aluno:</label>
+        <input type="number" id="studentId" required>
+        <button onclick="findStudent()">Procurar</button>
+        <div id="studentDetails"></div>
+    </section>
+
+    <section>
+        <h2>Alunos por Clube</h2>
+        <label for="clubSelect">Selecione o Clube:</label>
+        <select id="clubSelect" onchange="loadStudentsByClub()">
+            <!-- Opções de clubes serão carregadas aqui -->
+        </select>
+        <table id="studentTableByClub">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nome</th>
+                    <th>Email</th>
+                    <th>Idade</th>
+                    <th>Gênero</th>
+                    <th>Data de Matrícula</th>
+                    <th>Cidade</th>
+                    <th>Responsável</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Os dados dos alunos associados ao clube selecionado serão carregados aqui -->
+            </tbody>
+        </table>
+    </section>
+
+<script>
+    function loadTowns() {
+        fetch('/towns')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Falha ao carregar cidades.');
+            }
+            return response.json();
+        })
+        .then(towns => {
+            const townSelect = document.getElementById('townId');
+            const townParentSelect = document.getElementById('townIdParent');
+            townSelect.innerHTML = '<option value="">Selecione a Cidade ou adicione nova acima</option>'; // Limpar opções existentes
+            townParentSelect.innerHTML = '<option value="">Selecione a Cidade</option>'; // Limpar opções existentes
+            towns.forEach(town => {
+                const option = document.createElement('option');
+                option.value = town.id;
+                option.textContent = `${town.name} (População: ${town.population})`;
+                const optionClone = option.cloneNode(true);
+                townSelect.appendChild(option);
+                townParentSelect.appendChild(optionClone);
+            });
+        })
+        .catch(error => {
+            console.error('Erro ao carregar cidades:', error);
+            alert('Erro ao carregar a lista de cidades.');
+        });
+    }
+
+function loadTownsParents() {
+    fetch('/towns')
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Falha ao carregar cidades.');
+        }
+        return response.json();
+    })
+    .then(towns => {
+        const townSelect = document.getElementById('townIdParent');
+        townSelect.innerHTML = ''; // Limpar opções existentes
+        towns.forEach(town => {
+            const option = document.createElement('option');
+            option.value = town.id;
+            option.textContent = town.name;
+            townSelect.appendChild(option);
+        });
+    })
+    .catch(error => {
+        console.error('Erro ao carregar cidades:', error);
+        alert('Erro ao carregar a lista de cidades.');
+    });
+}
+
+function loadClubsStudent() {
+    fetch('/clubs')
+    .then(response => response.json())
+    .then(clubs => {
+        const clubSelect = document.getElementById('clubId');
+        clubs.forEach(club => {
+            const option = document.createElement('option');
+            option.value = club.id;
+            option.textContent = club.name;
+            clubSelect.appendChild(option);
+        });
+    });
+}
+
+function loadParents() {
+    fetch('/parents')
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Falha ao carregar responsáveis.');
+        }
+        return response.json();
+    })
+    .then(parents => {
+        const parentSelect = document.getElementById('parentSelect');
+        parentSelect.innerHTML = '<option value="">Selecione um Responsável Existente</option>'; // Limpa e adiciona a opção padrão
+        parents.forEach(parent => {
+            const option = document.createElement('option');
+            option.value = parent.id;
+            option.textContent = `${parent.firstName} ${parent.middleName ? parent.middleName + ' ' : ''}${parent.lastName}`;
+            parentSelect.appendChild(option);
+        });
+    })
+    .catch(error => {
+        console.error('Erro ao carregar responsáveis:', error);
+        alert('Erro ao carregar a lista de responsáveis.');
+    });
+}
+
+function addStudent() {
+    const firstName = document.getElementById('firstName').value;
+    const lastName = document.getElementById('lastName').value;
+    const middleName = document.getElementById('middleName').value;
+    const email = document.getElementById('email').value;
+    const egn = document.getElementById('egn').value;
+    const age = parseInt(document.getElementById('age').value);
+    const gender = document.getElementById('gender').value;
+    const enrollDate = document.getElementById('enrollDate').value;
+    const newCityName = document.getElementById('newCityName').value;
+    const newCityPopulation = parseInt(document.getElementById('newCityPopulation').value || 0);
+    const townId = document.getElementById('townId').value;
+    const newClubName = document.getElementById('newClubName').value;
+    const newClubDescription = document.getElementById('newClubDescription').value;
+    const clubId = document.getElementById('clubId').value;
+    const parentSelect = document.getElementById('parentSelect').value;
+    const parentFirstName = document.getElementById('parentFirstName').value;
+    const parentMiddleName = document.getElementById('parentMiddleName').value;
+    const parentLastName = document.getElementById('parentLastName').value;
+    const parentEmail = document.getElementById('parentEmail').value;
+    const parentPhoneNumber = document.getElementById('parentPhoneNumber').value;
+    const parentAge = parseInt(document.getElementById('parentAge').value);
+    const parentEGN = document.getElementById('parentEGN').value;
+    const parentGender = document.getElementById('parentGender').value;
+    const townIdParent = document.getElementById('townIdParent').value;
+
+    // Saga steps array to keep track of operations
+    let sagaSteps = [];
+
+    //Feito!!!
+    if (newCityName) {
+        const cityData = { name: newCityName, population: newCityPopulation, country: { id: 1, name: 'Bulgaria'} };
+        console.log("Enviando dados da cidade:", cityData);
+    
+        // Primeiro, tenta criar a cidade
+        sagaSteps.push(
+            fetch('/towns', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(cityData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Falha ao criar cidade');
+                }
+                return response.text();  // Primeiro lê como texto para verificar se é vazio
+            })
+            .then(text => {
+                let city = text ? JSON.parse(text) : {};
+                if (city.id) {
+                    console.log("Cidade criada com ID:", city.id);
+                    return { step: 'city', id: city.id };
+                } else {
+                    // Se não veio ID, busca o clube pelo nome na lista de todos os clubes
+                    console.log("Cidade criada sem ID, buscando pelo nome na lista completa...");
+                    return fetch(`/towns`)
+                        .then(response => response.json())
+                        .then(towns => {
+                            let foundtown = towns.find(c => c.name === newCityName);
+                            if (foundtown) {
+                                console.log("Cidade encontrada pelo nome:", foundtown);
+                                return { step: 'city', id: foundtown.id };
+                            } else {
+                                throw new Error('Cidade criado mas não encontrado na lista completa.');
+                            }
+                        });
+                }
+            })
+        );
+    }
+    
+    //Feito!!!
+    if (newClubName && newClubDescription) {
+        const clubData = { name: newClubName, description: newClubDescription };
+        console.log("Enviando dados do clube:", clubData);
+    
+        // Primeiro, tenta criar o clube
+        sagaSteps.push(
+            fetch('/clubs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(clubData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Falha ao criar clube');
+                }
+                return response.text();  // Primeiro lê como texto para verificar se é vazio
+            })
+            .then(text => {
+                let club = text ? JSON.parse(text) : {};
+                if (club.id) {
+                    console.log("Clube criado com ID:", club.id);
+                    return { step: 'club', id: club.id };
+                } else {
+                    // Se não veio ID, busca o clube pelo nome na lista de todos os clubes
+                    console.log("Clube criado sem ID, buscando pelo nome na lista completa...");
+                    return fetch(`/clubs`)
+                        .then(response => response.json())
+                        .then(clubs => {
+                            let foundClub = clubs.find(c => c.name === newClubName);
+                            if (foundClub) {
+                                console.log("Clube encontrado por nome:", foundClub);
+                                return { step: 'club', id: foundClub.id };
+                            } else {
+                                throw new Error('Clube criado mas não encontrado na lista completa.');
+                            }
+                        });
+                }
+            })
+        );
+    }    
+
+    // Create a parent first
+    if (!parentSelect && parentFirstName && parentLastName && parentEmail) {
+        const parentData = {
+            firstName: parentFirstName,
+            middleName: parentMiddleName,
+            lastName: parentLastName,
+            email: parentEmail,
+            phoneNumber: parentPhoneNumber,
+            age: parentAge,
+            egn: parentEGN,
+            gender: parentGender,
+            town: { id: parseInt(townIdParent) },
+            student_id: -1  // Temporary student ID
+        };
+        console.log(parentData);
+        sagaSteps.push(
+            fetch('/parents', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(parentData)
+            }).then(response => response.json())
+            .then(parent => {
+                return { step: 'parent', id: parent.id };
+            })
+        );
+    }
+
+    Promise.all(sagaSteps).then(results => {
+        // Extract IDs or use selected ones
+        const cityId = results.find(result => result.step === 'city')?.id || townId;
+        const clubIdResult = results.find(result => result.step === 'club')?.id || clubId;
+        const parentIdResult = results.find(result => result.step === 'parent')?.id || parentSelect;
+
+        // Now create the student with all data including the possibly newly created city and club
+        const studentData = {
+            firstName, lastName, middleName, email, egn, age, gender, enrollDate,
+            town: { id: parseInt(cityId)},
+            club_id: parseInt(clubIdResult),
+            parent: parseInt(parentIdResult)
+        };
+
+        console.log(studentData);
+
+        return fetch('/students', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(studentData)
+        }).then(response => {
+            if (response.ok) {
+                alert('Aluno adicionado com sucesso!');
+                document.getElementById('addStudentForm').reset(); // Reset form
+                loadStudents(); // Reload student list
+            } else {
+                throw new Error('Failed to create student');
+            }
+        });
+    }).catch(error => {
+        console.error('Failed to execute saga:', error);
+        alert('Failed to complete all operations: ' + error.message);
+        // Implement rollback if necessary
+    });
+}
+
+
+//Feito!!!
+function loadStudents() {
+    fetch('/students')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Falha ao carregar alunos.');
+            }
+            return response.json();
+        })
+        .then(students => {
+            // Criar pedidos para cidades, clubes e responsáveis para cada aluno
+            const dataRequests = students.map(student => {
+                const townPromise = fetch(`/towns/${student.town.id}`).then(response => {
+                    if (!response.ok) throw new Error('Falha ao carregar cidade.');
+                    return response.json().then(town => student.townName = town.name);
+                });
+
+                const clubPromise = student.club_id ? fetch(`/clubs/${student.club_id}`).then(response => {
+                    if (!response.ok) throw new Error('Falha ao carregar clube.');
+                    return response.json().then(club => student.clubName = club.name);
+                }) : Promise.resolve();
+
+                const parentPromise = student.parent ? fetch(`/parents/${student.parent}`).then(response => {
+                    if (!response.ok) throw new Error('Falha ao carregar responsável.');
+                    return response.json().then(parent => {
+                        student.parentFullName = `${parent.firstName} ${parent.middleName ? parent.middleName + ' ' : ''}${parent.lastName}`;
+                    });
+                }) : Promise.resolve();
+
+                return Promise.all([townPromise, clubPromise, parentPromise]).then(() => student);
+            });
+
+            return Promise.all(dataRequests);
+        })
+        .then(updatedStudents => {
+            const studentTable = document.getElementById('studentTable');
+            const tbody = studentTable.querySelector('tbody');
+            tbody.innerHTML = ''; // Limpar dados existentes
+
+            updatedStudents.forEach(student => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${student.id}</td>
+                    <td>${student.firstName} ${student.middleName ? student.middleName + ' ' : ''}${student.lastName}</td>
+                    <td>${student.email}</td>
+                    <td>${student.age}</td>
+                    <td>${student.gender === 'M' ? 'Masculino' : 'Feminino'}</td>
+                    <td>${student.enrollDate}</td>
+                    <td>${student.townName || ''}</td>
+                    <td>${student.parentFullName || 'N/A'}</td>
+                    <td>${student.clubName || 'N/A'}</td>
+                    <td><button onclick="removeStudent(${student.id})">Remover</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        })
+        .catch(error => {
+            console.error('Erro ao carregar alunos:', error);
+            alert('Erro ao carregar a lista de alunos.');
+        });
+}
+
+//Feito!!!
+function removeStudent(studentId) {
+    fetch(`/students/${studentId}`, {
+        method: 'DELETE'
+    })
+    .then(response => {
+        if (response.ok) {
+            // Se a resposta for bem-sucedida, recarrega a lista de alunos
+            loadStudents();
+            alert('Aluno removido com sucesso!');
+        } else {
+            // Se houver algum erro na resposta, exibe uma mensagem de erro
+            throw new Error('Erro ao remover aluno.');
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao remover aluno:', error);
+        alert('Erro ao remover o aluno.');
+    });
+}
+
+//Feito!!!
+function findStudent() {
+    const studentId = document.getElementById('studentId').value;
+    fetch(`/students/${studentId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Falha ao procurar aluno.');
+            }
+            return response.json();
+        })
+        .then(student => {
+            Promise.all([
+                fetch(`/towns/${student.town.id}`),
+                fetch(`/parents/${student.parent}`),
+                student.club_id ? fetch(`/clubs/${student.club_id}`) : Promise.resolve({ json: () => ({ name: 'N/A' }) }) // Handling case where no club ID is present
+            ]).then(responses => {
+                return Promise.all(responses.map(res => {
+                    if (!res.ok) {
+                        throw new Error('Falha ao carregar dados.');
+                    }
+                    return res.json();
+                }));
+            }).then(([town, parent, club]) => {
+                const studentDetails = document.getElementById('studentDetails');
+                studentDetails.innerHTML = `
+                    <p>ID: ${student.id}</p>
+                    <p>Nome: ${student.firstName} ${student.middleName ? student.middleName + ' ' : ''}${student.lastName}</p>
+                    <p>Email: ${student.email}</p>
+                    <p>Idade: ${student.age}</p>
+                    <p>Gênero: ${student.gender === 'M' ? 'Masculino' : 'Feminino'}</p>
+                    <p>Data de Matrícula: ${student.enrollDate}</p>
+                    <p>Cidade: ${town.name}</p>
+                    <p>Responsável: ${parent.firstName} ${parent.middleName ? parent.middleName + ' ' : ''}${parent.lastName}</p>
+                    <p>Clube: ${club.name}</p>
+                `;
+            }).catch(error => {
+                console.error('Erro ao carregar dados adicionais:', error);
+                alert('Erro ao carregar dados adicionais do aluno.');
+            });
+        })
+        .catch(error => {
+            console.error('Erro ao procurar aluno:', error);
+            alert('Erro ao procurar aluno.');
+        });
+}
+
+
+function loadStudentsByClub() {
+    const clubSelect = document.getElementById('clubSelect');
+    const selectedClubId = parseInt(clubSelect.value);
+
+    // Busca todos os alunos
+    fetch('/students')
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Falha ao carregar alunos.');
+        }
+        return response.json();
+    })
+    .then(students => {
+        // Filtra os alunos pelo ID do clube selecionado
+        const filteredStudents = students.filter(student => student.club_id === selectedClubId);
+
+        // Para cada aluno filtrado, faz um pedido para /towns e /parents
+        const additionalRequests = filteredStudents.map(student => {
+            return Promise.all([
+                fetch(`/towns/${student.town.id}`).then(response => response.json()),
+                fetch(`/parents/${student.parent}`).then(response => response.json())
+            ]).then(([town, parent]) => {
+                student.townName = town.name;
+                student.parentFullName = `${parent.firstName} ${parent.middleName ? parent.middleName + ' ' : ''}${parent.lastName}`;
+                student.townPopulation = town.population; // Adicionando a população ao objeto do estudante
+                return student;
+            });
+        });
+
+        // Aguarda todas as solicitações adicionais serem concluídas
+        return Promise.all(additionalRequests);
+    })
+    .then(updatedStudents => {
+        const tbody = document.querySelector('#studentTableByClub tbody');
+        tbody.innerHTML = ''; // Limpar dados existentes
+
+        // Filtra estudantes cujas cidades têm mais de 1000 habitantes
+        updatedStudents = updatedStudents.filter(student => student.townPopulation > 1000);
+
+        updatedStudents.forEach(student => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${student.id}</td>
+                <td>${student.firstName} ${student.middleName ? student.middleName + ' ' : ''}${student.lastName}</td>
+                <td>${student.email}</td>
+                <td>${student.age}</td>
+                <td>${student.gender === 'M' ? 'Masculino' : 'Feminino'}</td>
+                <td>${student.enrollDate}</td>
+                <td>${student.townName} (População: ${student.townPopulation})</td>
+                <td>${student.parentFullName}</td>
+                <td><button onclick="removeStudent(${student.id})">Remover</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    })
+    .catch(error => {
+        console.error('Erro ao carregar alunos:', error);
+        alert('Erro ao carregar a lista de alunos.');
+    });
+}
+
+
+//Feito!!!
+function loadClubs() {
+    fetch('/clubs')
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Falha ao carregar clubes.');
+        }
+        return response.json();
+    })
+    .then(clubs => {
+        const clubSelect = document.getElementById('clubSelect');
+        clubSelect.innerHTML = ''; // Limpar opções existentes
+        clubs.forEach(club => {
+            const option = document.createElement('option');
+            option.value = club.id;
+            option.textContent = club.name;
+            clubSelect.appendChild(option);
+        });
+        loadStudentsByClub(); // Carregar alunos associados ao primeiro clube da lista por padrão
+    })
+    .catch(error => {
+        console.error('Erro ao carregar clubes:', error);
+        alert('Erro ao carregar a lista de clubes.');
+    });
+}
+
+window.onload = function() {
+    loadClubsStudent() 
+    loadTowns();
+    loadStudents();
+    loadClubs();
+    loadTownsParents();
+    loadParents();
+}
+</script>
+</body>
+</html>
